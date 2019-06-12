@@ -69,6 +69,9 @@ if __name__ == '__main__':
         """
         print("Image detection mode")
         if "input" in FLAGS:
+            print("Flags: ", FLAGS)
+            print("Flags type: ", type(FLAGS))
+            print("Flags argument: ", vars(FLAGS))
             print(" Ignoring remaining command line arguments: " + FLAGS.input + "," + FLAGS.output)
         detect_img(YOLO(**vars(FLAGS)))
     elif "input" in FLAGS:
