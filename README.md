@@ -49,6 +49,7 @@ optional arguments:
 
 4. MultiGPU usage: use `--gpu_num N` to use N GPUs. It is passed to the [Keras multi_gpu_model()](https://keras.io/utils/#multi_gpu_model).
 
+
 ## Training
 
 1. Generate your own annotation file and class names file.  
