@@ -77,7 +77,7 @@ class YOLO(object):
                 num_anchors/len(self.yolo_model.output) * (num_classes + 5), \
                 'Mismatch between model and given anchor and class sizes'
 
-        # print('{} model, anchors, and classes loaded.'.format(model_path))
+        print('{} model, anchors, and classes loaded.'.format(model_path))
 
         # Generate colors for drawing bounding boxes.
         hsv_tuples = [(x / len(self.class_names), 1., 1.)
@@ -130,14 +130,10 @@ class YOLO(object):
                     size=np.floor(3e-2 * image.size[1] + 0.5).astype('int32'))
         thickness = (image.size[0] + image.size[1]) // 300
 
-        found_obj = []
-
         for i, c in reversed(list(enumerate(out_classes))):
             predicted_class = self.class_names[c]
             box = out_boxes[i]
             score = out_scores[i]
-
-            found_obj.append(predicted_class)
 
             label = '{} {:.2f}'.format(predicted_class, score)
             draw = ImageDraw.Draw(image)
@@ -168,7 +164,7 @@ class YOLO(object):
 
         end = timer()
         print(end - start)
-        return image, found_obj
+        return image
 
     def close_session(self):
         self.sess.close()
