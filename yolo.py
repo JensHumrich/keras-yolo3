@@ -9,7 +9,7 @@ from timeit import default_timer as timer
 
 import numpy as np
 from keras import backend as K
-from keras.models import load_model
+from keras.models import load_model, model_from_json
 from keras.layers import Input
 from PIL import Image, ImageFont, ImageDraw
 
@@ -17,10 +17,12 @@ from yolo3.model import yolo_eval, yolo_body, tiny_yolo_body
 from yolo3.utils import letterbox_image
 import os
 from keras.utils import multi_gpu_model
+import json
+
 
 class YOLO(object):
     _defaults = {
-        "model_path": 'logs/001/trained_weights_final.h5',
+        "model_path": 'logs/002/trained_weights_final.h5',
         "anchors_path": 'model_data/yolo_anchors.txt',
         "classes_path": 'model_data/voc_classes.txt',
         "score" : 0.3,
@@ -66,26 +68,30 @@ class YOLO(object):
         num_anchors = len(self.anchors)
         num_classes = len(self.class_names)
         is_tiny_version = num_anchors==6 # default setting
-        """
-        TODO?
-        import json
         
-        with open('model_in_json.json','r') as f:
-            model_json = json.load(f)
-        
-        model = model_from_json(model_json)
-        model.load_weights('model_weights.h5')
-        """
         try:
-            self.yolo_model = load_model(model_path, compile=False)
+            from yolo3.model import yolo_head
+            print ("Loading json model")
+            
+            with open('logs/002/model_in_json.json','r') as f:
+                model_json = json.load(f)
+            
+            model = model_from_json(model_json, custom_objects={"yolo_head":yolo_head})
+            model.load_weights('logs/002/trained_weights_final.h5')
         except:
+            # This is not working:
+            # self.yolo_model = load_model(model_path, compile=False)
+            # We create a new body:
+            print ("Is tiny model: {} ".format(is_tiny_version))
             self.yolo_model = tiny_yolo_body(Input(shape=(None,None,3)), num_anchors//2, num_classes) \
                 if is_tiny_version else yolo_body(Input(shape=(None,None,3)), num_anchors//3, num_classes)
             self.yolo_model.load_weights(self.model_path) # make sure model, anchors and classes match
         else:
             assert self.yolo_model.layers[-1].output_shape[-1] == \
                 num_anchors/len(self.yolo_model.output) * (num_classes + 5), \
-                'Mismatch between model and given anchor and class sizes'
+                'Mismatch between model {} and given anchor {} and class sizes {}  -> {}'.format(
+                        self.yolo_model.layers[-1].output_shape[-1], num_anchors, num_classes,
+                num_anchors/len(self.yolo_model.output) * (num_classes + 5))
 
         print('{} model, anchors, and classes loaded.'.format(model_path))
 
@@ -165,11 +171,10 @@ class YOLO(object):
             for i in range(thickness):
                 draw.rectangle(
                     [left + i, top + i, right - i, bottom - i],
-                    outline=self.colors[c])
+                    outline=0)
             draw.rectangle(
-                [tuple(text_origin), tuple(text_origin + label_size)],
-                fill=self.colors[c])
-            draw.text(text_origin, label, fill=(0, 0, 0), font=font)
+                [tuple(text_origin), tuple(text_origin + label_size)])
+            draw.text(text_origin, label, fill=(0), font=font)
             del draw
 
         end = timer()
