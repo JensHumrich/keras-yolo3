@@ -259,7 +259,7 @@ def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
     y_true: list of array, shape like yolo_outputs, xywh are reletive value
 
     '''
-    assert (true_boxes[..., 4]<num_classes).all(), 'class id must be less than num_classes'
+    assert (true_boxes[..., 4]<=num_classes).all(), 'max class id {} must be less than num_classes {}'.format(np.max(true_boxes[..., 4]), num_classes)
     num_layers = len(anchors)//3 # default setting
     anchor_mask = [[6,7,8], [3,4,5], [0,1,2]] if num_layers==3 else [[3,4,5], [1,2,3]]
 
@@ -310,7 +310,7 @@ def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
                     c = true_boxes[b,t, 4].astype('int32')
                     y_true[l][b, j, i, k, 0:4] = true_boxes[b,t, 0:4]
                     y_true[l][b, j, i, k, 4] = 1
-                    y_true[l][b, j, i, k, 5+c] = 1
+                    y_true[l][b, j, i, k, 5+(c-1)] = 1
 
     return y_true
 
@@ -385,7 +385,9 @@ def yolo_loss(args, anchors, num_classes, ignore_thresh=.5, print_loss=False):
     for l in range(num_layers):
         object_mask = y_true[l][..., 4:5]
         true_class_probs = y_true[l][..., 5:]
-
+        print (anchor_mask[l])
+        print (anchors[anchor_mask[l]])
+        print ("ERROR HERE:")
         grid, raw_pred, pred_xy, pred_wh = yolo_head(yolo_outputs[l],
              anchors[anchor_mask[l]], num_classes, input_shape, calc_loss=True)
         pred_box = K.concatenate([pred_xy, pred_wh])

@@ -12,6 +12,8 @@ from keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau, Ear
 from yolo3.model import preprocess_true_boxes, yolo_body, tiny_yolo_body, yolo_loss
 from yolo3.utils import get_random_data
 
+from pathlib import Path
+
 import argparse
 
 parser = argparse.ArgumentParser(description="Command Line Tool to Train YOLOv3")
@@ -40,8 +42,13 @@ def _main(args):
         model = create_tiny_model(input_shape, anchors, num_classes,
             freeze_body=2, weights_path='model_data/tiny_yolo_weights.h5')
     else:
-        model = create_model(input_shape, anchors, num_classes,
-            freeze_body=2, weights_path='model_data/yolo_weights.h5') # make sure you know what you freeze
+        if Path("logs/000/trained_weights_stage_1.h5").exists():
+            print ("Loading stage 1 result")
+            model = create_model(input_shape, anchors, num_classes,
+                freeze_body=2, weights_path='logs/000/trained_weights_stage_1.h5')
+        else:
+            model = create_model(input_shape, anchors, num_classes,
+                freeze_body=2, weights_path='model_data/yolo_weights.h5') # make sure you know what you freeze
 
     model.summary()
 
@@ -95,6 +102,13 @@ def _main(args):
             epochs=125,
             initial_epoch=75,
             callbacks=[logging, checkpoint, reduce_lr, early_stopping])
+        
+        # Store model in json mode for later opening the archticture:
+        import json
+        model_json = model.to_json()
+        with open(log_dir + "model_in_json.json", "w") as json_file:
+            json.dump(model_json, json_file)
+
         model.save_weights(log_dir + 'trained_weights_final.h5')
 
     # Further training if needed.
@@ -191,8 +205,15 @@ def data_generator(annotation_lines, batch_size, input_shape, anchors, num_class
             i = (i+1) % n
         image_data = np.array(image_data)
         box_data = np.array(box_data)
-        y_true = preprocess_true_boxes(box_data, input_shape, anchors, num_classes)
-        yield [image_data, *y_true], np.zeros(batch_size)
+        try:
+            y_true = preprocess_true_boxes(box_data, input_shape, anchors, num_classes)
+            yield [image_data, *y_true], np.zeros(batch_size)
+        except:
+            print (box_data.shape)
+            print (box_data[:,:,4])
+            print (num_classes)
+            print ("ERROR")
+            y_true = preprocess_true_boxes(box_data, input_shape, anchors, num_classes)
 
 def data_generator_wrapper(annotation_lines, batch_size, input_shape, anchors, num_classes):
     n = len(annotation_lines)
