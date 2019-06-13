@@ -16,15 +16,16 @@ from PIL import Image, ImageFont, ImageDraw
 from yolo3.model import yolo_eval, yolo_body, tiny_yolo_body
 from yolo3.utils import letterbox_image
 import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 from keras.utils import multi_gpu_model
 import json
 
 
 class YOLO(object):
     _defaults = {
-        "model_path": 'logs/002/trained_weights_final.h5',
-        "anchors_path": 'model_data/yolo_anchors.txt',
-        "classes_path": 'model_data/voc_classes.txt',
+        "model_path": os.path.join(os.path.dirname(__file__), 'logs/002/trained_weights_final.h5'),
+        "anchors_path": os.path.join(os.path.dirname(__file__), 'model_data/yolo_anchors.txt'),
+        "classes_path": os.path.join(os.path.dirname(__file__), 'model_data/voc_classes.txt'),
         "score" : 0.3,
         "iou" : 0.45,
         "model_image_size" : (416, 416),
@@ -142,7 +143,7 @@ class YOLO(object):
 
         print('Found {} boxes for {}'.format(len(out_boxes), 'img'))
 
-        font = ImageFont.truetype(font='font/FiraMono-Medium.otf',
+        font = ImageFont.truetype(font=os.path.join(os.path.dirname(__file__), 'font/FiraMono-Medium.otf'),
                     size=np.floor(3e-2 * image.size[1] + 0.5).astype('int32'))
         thickness = (image.size[0] + image.size[1]) // 300
 
@@ -186,7 +187,10 @@ class YOLO(object):
 
 def detect_video(yolo, video_path, output_path=""):
     import cv2
-    vid = cv2.VideoCapture(video_path)
+    video_path_formatted = video_path
+    if video_path.isdigit():
+        video_path_formatted = int(video_path)
+    vid = cv2.VideoCapture(video_path_formatted)
     if not vid.isOpened():
         raise IOError("Couldn't open webcam or video")
     video_FourCC    = int(vid.get(cv2.CAP_PROP_FOURCC))

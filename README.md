@@ -19,7 +19,7 @@ A Keras implementation of YOLOv3 (Tensorflow backend) inspired by [allanzelener/
 wget https://pjreddie.com/media/files/yolov3.weights
 python convert.py yolov3.cfg yolov3.weights model_data/yolo.h5
 python yolo_video.py [OPTIONS...] --image, for image detection mode, OR
-python yolo_video.py [video_path] [output_path (optional)]
+python yolo_video.py --input [video_path] --output [output_path (optional)]
 ```
 
 For Tiny YOLOv3, just do in a similar way, just specify model path and anchor path with `--model model_file` and `--anchors anchor_file`.
@@ -49,6 +49,7 @@ optional arguments:
 
 4. MultiGPU usage: use `--gpu_num N` to use N GPUs. It is passed to the [Keras multi_gpu_model()](https://keras.io/utils/#multi_gpu_model).
 
+
 ## Training
 
 1. Generate your own annotation file and class names file.  
@@ -69,7 +70,32 @@ optional arguments:
 3. Modify train.py and start training.  
     `python train.py`  
     Use your trained weights or checkpoint weights with command line option `--model model_file` when using yolo_video.py
-    Remember to modify class path or anchor path, with `--classes class_file` and `--anchors anchor_file`.
+    Remember to modify class path or anchor path, with `--classes class_file` and `--anchors anchor_file`. Use `--use_lrn` flag to use LocalResponseNormalization layer instead of BatchNormalization
+    
+    ```
+    python3 train.py --help
+    usage: train.py [-h] [--annotation ANNOTATION] [--log_dir LOG_DIR]
+                [--class_path CLASS_PATH] [--anchor_path ANCHOR_PATH]
+                [--batch_size BATCH_SIZE] [--use_lrn]
+
+    Command Line Tool to Train YOLOv3
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      --annotation ANNOTATION
+                            Path to .txt Annotation File
+      --log_dir LOG_DIR     Path to Log the TensorBoard and Save Model
+      --class_path CLASS_PATH
+                            Path to Classes File
+      --anchor_path ANCHOR_PATH
+                            Path to Anchors File
+      --batch_size BATCH_SIZE
+                            Batch Size
+      --use_lrn             Whether to use LRN instead of BatchNormalization Layer
+    ```
+    
+    LRN.py from yolo3 directory is inspired from a previous commit under [fchollet/keras](https://github.com/keras-team/keras/commit/82353da4dc66bc702a74c6c233f3e16b7682f9e6)
+    
 
 If you want to use original pretrained weights for YOLOv3:  
     1. `wget https://pjreddie.com/media/files/darknet53.conv.74`  
