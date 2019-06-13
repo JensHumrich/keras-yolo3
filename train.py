@@ -12,12 +12,13 @@ from keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau, Ear
 from yolo3.model import preprocess_true_boxes, yolo_body, tiny_yolo_body, yolo_loss
 from yolo3.utils import get_random_data
 
+from pathlib import Path
 
 def _main():
     annotation_path = 'train.txt'
-    log_dir = 'logs/000/'
-    classes_path = 'model_data/voc_classes.txt'
-    anchors_path = 'model_data/yolo_anchors.txt'
+    log_dir = 'logs/002/'
+    classes_path = 'model_data/abanca_classes.txt'
+    anchors_path = 'model_data/abanca_anchors.txt'
     class_names = get_classes(classes_path)
     num_classes = len(class_names)
     anchors = get_anchors(anchors_path)
@@ -29,8 +30,13 @@ def _main():
         model = create_tiny_model(input_shape, anchors, num_classes,
             freeze_body=2, weights_path='model_data/tiny_yolo_weights.h5')
     else:
-        model = create_model(input_shape, anchors, num_classes,
-            freeze_body=2, weights_path='model_data/yolo_weights.h5') # make sure you know what you freeze
+        if Path("logs/000/trained_weights_stage_1.h5").exists():
+            print ("Loading stage 1 result")
+            model = create_model(input_shape, anchors, num_classes,
+                freeze_body=2, weights_path='logs/000/trained_weights_stage_1.h5')
+        else:
+            model = create_model(input_shape, anchors, num_classes,
+                freeze_body=2, weights_path='model_data/yolo_weights.h5') # make sure you know what you freeze
 
     logging = TensorBoard(log_dir=log_dir)
     checkpoint = ModelCheckpoint(log_dir + 'ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}.h5',
@@ -73,7 +79,7 @@ def _main():
         model.compile(optimizer=Adam(lr=1e-4), loss={'yolo_loss': lambda y_true, y_pred: y_pred}) # recompile to apply the change
         print('Unfreeze all of the layers.')
 
-        batch_size = 32 # note that more GPU memory is required after unfreezing the body
+        batch_size = 16 # note that more GPU memory is required after unfreezing the body
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
         model.fit_generator(data_generator_wrapper(lines[:num_train], batch_size, input_shape, anchors, num_classes),
             steps_per_epoch=max(1, num_train//batch_size),
@@ -82,6 +88,13 @@ def _main():
             epochs=100,
             initial_epoch=50,
             callbacks=[logging, checkpoint, reduce_lr, early_stopping])
+        
+        # Store model in json mode for later opening the archticture:
+        import json
+        model_json = model.to_json()
+        with open(log_dir + "model_in_json.json", "w") as json_file:
+            json.dump(model_json, json_file)
+
         model.save_weights(log_dir + 'trained_weights_final.h5')
 
     # Further training if needed.
@@ -178,8 +191,15 @@ def data_generator(annotation_lines, batch_size, input_shape, anchors, num_class
             i = (i+1) % n
         image_data = np.array(image_data)
         box_data = np.array(box_data)
-        y_true = preprocess_true_boxes(box_data, input_shape, anchors, num_classes)
-        yield [image_data, *y_true], np.zeros(batch_size)
+        try:
+            y_true = preprocess_true_boxes(box_data, input_shape, anchors, num_classes)
+            yield [image_data, *y_true], np.zeros(batch_size)
+        except:
+            print (box_data.shape)
+            print (box_data[:,:,4])
+            print (num_classes)
+            print ("ERROR")
+            y_true = preprocess_true_boxes(box_data, input_shape, anchors, num_classes)
 
 def data_generator_wrapper(annotation_lines, batch_size, input_shape, anchors, num_classes):
     n = len(annotation_lines)

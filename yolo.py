@@ -20,9 +20,9 @@ from keras.utils import multi_gpu_model
 
 class YOLO(object):
     _defaults = {
-        "model_path": 'model_data/yolo.h5',
+        "model_path": 'logs/001/trained_weights_final.h5',
         "anchors_path": 'model_data/yolo_anchors.txt',
-        "classes_path": 'model_data/coco_classes.txt',
+        "classes_path": 'model_data/voc_classes.txt',
         "score" : 0.3,
         "iou" : 0.45,
         "model_image_size" : (416, 416),
@@ -66,6 +66,16 @@ class YOLO(object):
         num_anchors = len(self.anchors)
         num_classes = len(self.class_names)
         is_tiny_version = num_anchors==6 # default setting
+        """
+        TODO?
+        import json
+        
+        with open('model_in_json.json','r') as f:
+            model_json = json.load(f)
+        
+        model = model_from_json(model_json)
+        model.load_weights('model_weights.h5')
+        """
         try:
             self.yolo_model = load_model(model_path, compile=False)
         except:
